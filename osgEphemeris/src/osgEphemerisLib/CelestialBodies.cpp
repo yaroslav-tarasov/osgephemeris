@@ -155,11 +155,15 @@ double CelestialBody::sgCalcEccAnom(double M, double e)
     if (e > 0.05)
     {
         E0 = eccAnom;
+        int count = 0;
         do
         {
              E1 = E0 - (E0 - e * sin(E0) - M) / (1 - e *cos(E0));
              diff = fabs(E0 - E1);
              E0 = E1;
+             ++count;
+             if (count > 200)
+                break;
         } while (diff > epsilon );
         return E0;
     }

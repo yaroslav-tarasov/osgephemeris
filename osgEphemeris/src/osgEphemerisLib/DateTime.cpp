@@ -55,6 +55,7 @@ DateTime::DateTime(
             uint32_t hour,
             uint32_t minute,
             uint32_t second  )
+: _tzoff(0)
 {
     _tm.tm_year = year - 1900;
     _tm.tm_mon  = month - 1;
@@ -70,12 +71,13 @@ DateTime::DateTime(
 }
 
 DateTime::DateTime( const DateTime &dt ):
-    _tm(dt._tm)
+    _tm(dt._tm), _tzoff(0)
 {
     mktime(&_tm);
 }
 
 DateTime::DateTime(bool initialize)
+: _tzoff(0)
 {
     if( initialize )
     {
@@ -84,6 +86,7 @@ DateTime::DateTime(bool initialize)
 }
 
 DateTime::DateTime( const struct tm &tm )
+: _tzoff(0)
 {
     _tm = tm;
     mktime( &_tm );

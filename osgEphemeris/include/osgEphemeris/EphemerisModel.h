@@ -223,6 +223,13 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
           */
         unsigned int getSunLightNum() const;
 
+        
+		/** RSC modifications for sensor simulation.
+		  */
+      osg::Vec3d getSunPosition();
+		osg::Vec4 getSunLightAmbient();
+		osg::Vec4 getSunLightDiffuse();
+
         /**
           Set which OpenGL light number should be used for the Moon light source.
           */
@@ -231,6 +238,13 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
           Return which OpenGL light number is being used for the Moon light source.
           */
         unsigned int getMoonLightNum() const;
+
+        
+		/** RSC modifications for sensor simulation.
+		  */
+		osg::Vec4 getMoonLightAmbient();
+		osg::Vec4 getMoonLightDiffuse();
+		
 
         /**
           Set whether EphemerisModel should move the SkyDome and all components to be

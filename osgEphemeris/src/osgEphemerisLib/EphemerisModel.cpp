@@ -705,3 +705,43 @@ const EphemerisUpdateCallback *EphemerisModel::getEphemerisUpdateCallback()  con
     return _ephemerisUpdateCallback.get();
 }
 
+
+/** RSC modifications for sensor simulation.
+  *
+  */
+//////////////////////////////////////////////////////////////////////////////
+//
+osg::Vec4
+EphemerisModel :: getMoonLightAmbient()
+{
+  return _moonLightSource->getLight()->getAmbient();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+osg::Vec4
+EphemerisModel :: getMoonLightDiffuse()
+{
+  return _moonLightSource->getLight()->getDiffuse();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+osg::Vec4
+EphemerisModel :: getSunLightAmbient()
+{
+  return _sunLightSource->getLight()->getAmbient();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+osg::Vec4
+EphemerisModel :: getSunLightDiffuse()
+{
+  return _sunLightSource->getLight()->getDiffuse();
+}
+
+osg::Vec3d osgEphemeris::EphemerisModel::getSunPosition()
+{
+   return _sunVec;
+}
