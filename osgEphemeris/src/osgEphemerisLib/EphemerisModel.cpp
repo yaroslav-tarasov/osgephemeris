@@ -236,8 +236,16 @@ bool EphemerisModel::_init()
     return _inited = true;
 }
 
+void EphemerisModel::setSunLightSource(osg::LightSource* sunLightSource)
+{
+    if(!_sunLightSource.valid())
+        _sunLightSource = sunLightSource;
+}
+
+
 void EphemerisModel::_createSunLightSource()
 {
+    if(!_sunLightSource.valid())
     _sunLightSource = new osg::LightSource;
 }
 

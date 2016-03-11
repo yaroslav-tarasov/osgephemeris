@@ -91,19 +91,21 @@ void MoonModel::_buildStateSet()
     sset->setGlobalDefaults();
 
     osg::ref_ptr<osg::Program> program = new osg::Program;
-    program->addShader( new osg::Shader(osg::Shader::VERTEX, _vertexShaderProgram ));
-    /*
-    osg::ref_ptr<osg::Shader> vertexShader = new osg::Shader(osg::Shader::VERTEX);
-    vertexShader->loadShaderSourceFromFile("prog.vert");
-    program->addShader( vertexShader.get() );
-    */
 
-    program->addShader( new osg::Shader(osg::Shader::FRAGMENT, _fragmentShaderProgram ));
-    /*
+    
+    osg::ref_ptr<osg::Shader> vertexShader = new osg::Shader(osg::Shader::VERTEX);
+    
+    if(vertexShader->loadShaderSourceFromFile("moon.vert"))
+    program->addShader( vertexShader.get() );
+    else
+        program->addShader( new osg::Shader(osg::Shader::VERTEX, _vertexShaderProgram ));
+
     osg::ref_ptr<osg::Shader> fragmentShader = new osg::Shader(osg::Shader::FRAGMENT);
-    fragmentShader->loadShaderSourceFromFile("prog.frag");
+    
+    if(fragmentShader->loadShaderSourceFromFile("moon.frag"))
     program->addShader( fragmentShader.get() );
-    */
+    else
+        program->addShader( new osg::Shader(osg::Shader::FRAGMENT, _fragmentShaderProgram ));
 
     sset->setAttributeAndModes( program.get(), osg::StateAttribute::ON );
 

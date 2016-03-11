@@ -72,6 +72,8 @@ StarField::StarField( const std::string &fileName, double radius ):
     //_buildLabels();
     // We will need this if we need to rebuild the labels
     //_stars.clear();
+
+    setName("StarField");
 }
 
 static inline osg::ref_ptr<osgText::Text> makeText( const std::string &textString, osg::Vec3 pos )
@@ -200,19 +202,19 @@ void StarField::_buildGeometry()
     sset->setMode( GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON );
     osg::ref_ptr<osg::Program> program = new osg::Program;
 
-    program->addShader( new osg::Shader(osg::Shader::VERTEX, _vertexShaderProgram ));
-    /*
     osg::ref_ptr<osg::Shader> vertexShader = new osg::Shader(osg::Shader::VERTEX);
-    vertexShader->loadShaderSourceFromFile("./stars.vert");
+    
+    if(vertexShader->loadShaderSourceFromFile("stars.vert"))
     program->addShader( vertexShader.get() );
-    */
+    else
+        program->addShader( new osg::Shader(osg::Shader::VERTEX, _vertexShaderProgram ));
 
-     program->addShader( new osg::Shader(osg::Shader::FRAGMENT, _fragmentShaderProgram ));
-     /*
      osg::ref_ptr<osg::Shader> fragmentShader = new osg::Shader(osg::Shader::FRAGMENT);
-     fragmentShader->loadShaderSourceFromFile("./stars.frag");
+
+    if(fragmentShader->loadShaderSourceFromFile("stars.frag"))
      program->addShader( fragmentShader.get() );
-     */
+    else
+        program->addShader( new osg::Shader(osg::Shader::FRAGMENT, _fragmentShaderProgram ));
 
     sset->setAttributeAndModes( program.get(), osg::StateAttribute::ON );
 

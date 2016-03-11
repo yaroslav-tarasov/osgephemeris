@@ -192,6 +192,13 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
         double getSkyDomeRadius() const;
 
         /**
+          Set external light source.  
+          \param  osg::LightSource light source
+        */
+
+        void setSunLightSource(osg::LightSource* sunLightSource);
+
+        /**
           Set the position of the center of the skydome in 3 space.  
           \param center An osg::Vec3 containing the x,y,z position in 3 space of the
                         SkyDome center.  Note that this should be used even when
