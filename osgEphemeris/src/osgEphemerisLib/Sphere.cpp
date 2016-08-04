@@ -35,8 +35,8 @@ Sphere::Sphere( double radius,
 {
     _skyTexCoords = stc;
 
-    unsigned int nsectors = 4;
-    double latStep  = 
+    const unsigned int nsectors = 4;
+    const double latStep  = 
         ( tr == TessHigh ) ?  1.875 :
         ( tr == TessLow ) ?   15 : 7.5;
 
@@ -45,20 +45,20 @@ Sphere::Sphere( double radius,
     int R = 0;
     for( unsigned int sector = 0; sector < nsectors; sector++ )
     {
-        double off = double(sector) * 360.0/(double)(nsectors);
+        const double off = double(sector) * 360.0/(double)(nsectors);
         int div = 1;
 
         v->push_back( osg::Vec3(0,0,radius));
         for( double lat = latStep; lat <= 91.0; lat += latStep )
         {
-            double dd = (360.0/double(nsectors))/(double)(div);
+            const double dd = (360.0/double(nsectors))/(double)(div);
             for( int i = 0; i <= div; i++ ) 
             {
-                double lon = off + double(i) * dd;
+                const double lon = off + double(i) * dd;
 
-                double x = radius * cos(osg::DegreesToRadians(lon)) *  sin(osg::DegreesToRadians(lat));
-                double y = radius * sin(osg::DegreesToRadians(lon)) *  sin(osg::DegreesToRadians(lat));
-                double z = radius * cos(osg::DegreesToRadians(lat));
+                const double x = radius * cos(osg::DegreesToRadians(lon)) *  sin(osg::DegreesToRadians(lat));
+                const double y = radius * sin(osg::DegreesToRadians(lon)) *  sin(osg::DegreesToRadians(lat));
+                const double z = radius * cos(osg::DegreesToRadians(lat));
 
                 v->push_back( osg::Vec3(x,y,z));
             }

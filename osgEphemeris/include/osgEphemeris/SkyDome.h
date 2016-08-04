@@ -46,7 +46,7 @@ class OSGEPHEMERIS_EXPORT SkyDome:  public Sphere
         /**
           Default Constructor
           */
-        SkyDome( bool useBothHemispheres=true, bool MirrorInBothHemispheres=true );
+        SkyDome( bool useBothHemispheres=true, bool MirrorInBothHemispheres=true , unsigned  skyDomeXSize=128, unsigned	skyDomeYSize=128, bool useOMP=false, unsigned	ompThreads=0);
 
         void setSunPos( double azimuth, double altitude );
         void setTurbidity( float t );
@@ -67,13 +67,16 @@ class OSGEPHEMERIS_EXPORT SkyDome:  public Sphere
         unsigned int _skyTextureUnit;
         osg::ref_ptr<osg::Texture2D> _skyTexture;
 
-        unsigned int _sunTextureUnit;
+        unsigned int                 _sunTextureUnit;
         osg::ref_ptr<osg::Texture2D> _sunTexture;
-        osg::ref_ptr<osg::Image> _sunImage;
-        osg::ref_ptr<osg::TexGen> _sunTexGenNorth;
-        osg::ref_ptr<osg::TexGen> _sunTexGenSouth;
+        osg::ref_ptr<osg::Image>     _sunImage;
+        osg::ref_ptr<osg::TexGen>    _sunTexGenNorth;
+        osg::ref_ptr<osg::TexGen>    _sunTexGenSouth;
 
         bool _mirrorInSouthernHemisphere;
+
+		bool        _useOMP;
+		unsigned	_ompThreads;
 
         class SectorUpdateCallback: public osg::Drawable::UpdateCallback
         {
@@ -104,6 +107,11 @@ class OSGEPHEMERIS_EXPORT SkyDome:  public Sphere
         static unsigned int  _sunImageInternalTextureFormat;
         static unsigned int  _sunImagePixelFormat;
         static unsigned char _sunImageData[];
+			  
+    	unsigned			_skyDomeXSize;
+	    unsigned			_skyDomeYSize;
+
+
 
 /* Sky luminance model adapted from:
  * A. J. Preetham, Peter, Shirley, Brian, Smits, "A Practical Analytic

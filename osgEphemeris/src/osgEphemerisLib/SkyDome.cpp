@@ -35,12 +35,13 @@
 
 #include <osgEphemeris/SkyDome.h>
 
+#include <omp.h>
 
 using namespace osgEphemeris;
 
 const double SkyDome::_meanDistanceToMoon = 384403000.0;
-#define SKY_DOME_X_SIZE 128
-#define SKY_DOME_Y_SIZE 128
+//#define SKY_DOME_X_SIZE (128*8)
+//#define SKY_DOME_Y_SIZE (128*8)
 
 // Looks like somewhere along the way, OSG stopped calling Drawable Callbacks....
 // So we'll do it ourselves.
@@ -68,27 +69,35 @@ class SkyDomeUpdateCallback: public osg::NodeCallback
                 for( unsigned int i= 0; i < geode->getNumDrawables(); i++ )
                 {
                     osg::Drawable *dbl = geode->getDrawable(i);
+#if OSG_MIN_VERSION_REQUIRED(3,3,2)
+                    auto *updateCallback = dbl->getUpdateCallback();
+#else
                     osg::Drawable::UpdateCallback *updateCallback = dbl->getUpdateCallback();
+#endif
                     if( updateCallback != NULL )
-                        updateCallback->update( nv, dbl );
+                        dynamic_cast<osg::Drawable::UpdateCallback*>(updateCallback)->update( nv, dbl );
                 }
             }
         }
 
 };
 
-SkyDome::SkyDome( bool useBothHemispheres, bool mirrorInSouthernHemisphere ):
-    Sphere( _meanDistanceToMoon,
+SkyDome::SkyDome( bool useBothHemispheres, bool mirrorInSouthernHemisphere, unsigned  skyDomeXSize, unsigned	skyDomeYSize, bool useOMP, unsigned	ompThreads)
+	:  Sphere( _meanDistanceToMoon,
             Sphere::TessHigh,
             Sphere::InnerOrientation,
             useBothHemispheres ? Sphere::BothHemispheres : Sphere::NorthernHemisphere,
-            true ),
-    _sunFudgeScale(1.0),
-    _skyTextureUnit(0),
-    _sunTextureUnit(1),
-    _mirrorInSouthernHemisphere( mirrorInSouthernHemisphere ),
-    _T(2.0f),
-    _current_tex_row(0)
+            true )
+     , _sunFudgeScale(1.0)
+     , _skyTextureUnit(0)
+     , _sunTextureUnit(1)
+     , _mirrorInSouthernHemisphere( mirrorInSouthernHemisphere )
+     , _T(2.0f)
+     , _current_tex_row(0)
+	 , _skyDomeXSize(skyDomeXSize)
+	 , _skyDomeYSize(skyDomeYSize)
+	 , _useOMP(useOMP)
+	 , _ompThreads(ompThreads)
 {
     unsigned int nsectors = _northernHemisphere->getNumDrawables();
 
@@ -196,9 +205,9 @@ void SkyDome::setTurbidity( float t )
     _updateDistributionCoefficients();
 }
 
-void SkyDome::traverse(osg::NodeVisitor&nv)
+void SkyDome::traverse(osg::NodeVisitor&  nv)
 {
-    if (dynamic_cast<osgUtil::UpdateVisitor*>(&nv))
+    if (nv.getVisitorType()==osg::NodeVisitor::UPDATE_VISITOR)	 
                    return;
 
     // The sun fills 0.53 degrees of visual angle.  The 1.45 multiplier is because the sun texture includes
@@ -296,9 +305,9 @@ void SkyDome::_buildStateSet()
         sset->setTextureMode( _skyTextureUnit, GL_TEXTURE_GEN_Q, osg::StateAttribute::OFF );
         sset->setTextureAttributeAndModes( _skyTextureUnit, texGen, osg::StateAttribute::ON );*/
 		  
-        unsigned char *data = new unsigned char[SKY_DOME_X_SIZE * SKY_DOME_Y_SIZE * 3];
+        unsigned char *data = new unsigned char[_skyDomeXSize * _skyDomeYSize * 3];
         unsigned char *ptr = data;
-        for( int i = 0; i < SKY_DOME_X_SIZE * SKY_DOME_Y_SIZE; i++ )
+        for( int i = 0; i < _skyDomeXSize * _skyDomeYSize; i++ )
         {
             *(ptr++) = 0x30;
             *(ptr++) = 0x30;
@@ -306,7 +315,7 @@ void SkyDome::_buildStateSet()
         }
         
         osg::Image *skyImage = new osg::Image;
-        skyImage->setImage( SKY_DOME_X_SIZE, SKY_DOME_Y_SIZE, 1, GL_RGB, GL_RGB,
+        skyImage->setImage( _skyDomeXSize, _skyDomeYSize, 1, GL_RGB, GL_RGB,
             GL_UNSIGNED_BYTE, data, osg::Image::USE_NEW_DELETE );
         _skyTexture = new osg::Texture2D;
         _skyTexture->setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT);
@@ -380,11 +389,9 @@ SkyDome::SectorUpdateCallback::SectorUpdateCallback( double &sunAz, double min, 
 void SkyDome::SectorUpdateCallback::update(osg::NodeVisitor* nv, osg::Drawable* dbl) 
 {
     osg::ref_ptr<osgUtil::UpdateVisitor> updateVisitor = dynamic_cast<osgUtil::UpdateVisitor*>(nv);
-
-    if( !updateVisitor.valid()  )
-    {
+	
+	if (nv->getVisitorType()!=osg::NodeVisitor::UPDATE_VISITOR)	
        return;
-    }
 
     double sun = _range(_sunAz, 360);
 
@@ -538,33 +545,41 @@ void SkyDome::_computeSkyTexture()
 {
     const float altitude = static_cast<float>(osg::DegreesToRadians(_sunAltitude));
     const float azimuth  = static_cast<float>(osg::DegreesToRadians(_sunAzimuth));
+	
+#ifdef _OPENMP
+	if(_useOMP)
+		omp_set_num_threads(_ompThreads);
+#endif
 
-    _theta_sun = osg::DegreesToRadians(90.0 - _sunAltitude);
+	_theta_sun = osg::DegreesToRadians(90.0 - _sunAltitude);
     _theta_sun_0_1 = (90.0 - _sunAltitude) / 90.0f;
     _cos_theta_sun = cosf(_theta_sun);
     _cos_theta_sun_squared = _cos_theta_sun * _cos_theta_sun;
     _sin_theta_sun = sinf(_theta_sun);
 
     // part of Preetham model
-    //_updateZenithxyY();
+    // _updateZenithxyY();
 
     _sunset_atten = powf(_sin_theta_sun, 20.0f);
 
     osg::Image *image = _skyTexture->getImage();
-    if( image != 0L )
+    if( image != 0L)
     {
-        unsigned char *ptr = image->data() + (_current_tex_row * SKY_DOME_X_SIZE * 3);
+
+		unsigned char *ptr = image->data() + (_current_tex_row * _skyDomeXSize * 3);
 
         osg::Vec3f sun_vec( sinf(azimuth) * cosf(altitude),
                             cosf(azimuth) * cosf(altitude),
                             sinf(altitude) );
 
-        const int end_row( _current_tex_row + 4 );
+		int rows=0;
+
+		const int end_row( _current_tex_row + 4 );
         while(_current_tex_row < end_row)
         //for(int j=0; j<SKY_DOME_Y_SIZE; j++)
         {
             const float texel_alt( 1.57079633f - 
-                ((float(_current_tex_row) + 0.5f) * 1.57079633f / float(SKY_DOME_Y_SIZE)) );
+                ((float(_current_tex_row) + 0.5f) * 1.57079633f / float(_skyDomeYSize)) );
             const float cos_texel_alt( cosf(texel_alt) );
             const float sin_texel_alt( sinf(texel_alt) );
             // theta = angle between zenith and texel
@@ -572,10 +587,14 @@ void SkyDome::_computeSkyTexture()
             // theta remapped from {0, pi} to {0, 1}
             const float theta_0_1( theta / 1.57079633f );
 
-            for(int i=0; i<SKY_DOME_X_SIZE; ++i)
+		if(_useOMP)
+#ifdef _OPENMP
+			#pragma omp parallel for 
+#endif
+            for(int i=0; i<_skyDomeXSize; ++i)
             {
                 const float texel_azi( -1.57079633f - 
-                    (float(i) + 0.5f) * 6.28318531f / float(SKY_DOME_X_SIZE) );
+                    (float(i) + 0.5f) * 6.28318531f / float(_skyDomeXSize) );
                 const float cos_texel_azi( cosf(texel_azi) );
                 const float sin_texel_azi( sinf(texel_azi) );
                 osg::Vec3f texel_vec( sin_texel_azi * cos_texel_alt,
@@ -626,18 +645,83 @@ void SkyDome::_computeSkyTexture()
                 R = (R > 1.0f) ? 1.0f : R;
                 G = (G > 1.0f) ? 1.0f : G;
                 B = (B > 1.0f) ? 1.0f : B;
+
+                /**(ptr++)*/*(ptr + (rows * _skyDomeXSize * 3 + i * 3) )     = (unsigned char)(R * 255.0f);
+                /**(ptr++)*/*(ptr + (rows * _skyDomeXSize * 3 + i * 3 + 1) ) = (unsigned char)(G * 255.0f);
+                /**(ptr++)*/*(ptr + (rows * _skyDomeXSize * 3 + i * 3 + 2) ) = (unsigned char)(B * 255.0f);
+            }
+		else
+		{
+			for(int i=0; i<_skyDomeXSize; ++i)
+            {
+                const float texel_azi( -1.57079633f - 
+                    (float(i) + 0.5f) * 6.28318531f / float(_skyDomeXSize) );
+                const float cos_texel_azi( cosf(texel_azi) );
+                const float sin_texel_azi( sinf(texel_azi) );
+                osg::Vec3f texel_vec( sin_texel_azi * cos_texel_alt,
+                                      cos_texel_azi * cos_texel_alt,
+                                      sin_texel_alt );
+                // gamma = angle between sun and texel
+                const float cos_gamma( sun_vec * texel_vec );
+                const float gamma( acosf(cos_gamma) );
+                //const float cos_gamma_sq( cos_gamma * cos_gamma );
+                // gamma remapped from {0, pi} to {1, 0}
+                const float gamma_1_0( 1.0f - (gamma / 3.14159265f) );
+                // gamma_1_0 weighted such that it is larger for texels that are lower in the sky
+                // This is used for a more realistic--less circular--circumsolar glow
+                const float weighted_gamma_1_0(powf(gamma_1_0, 1.0f - theta_0_1 * 0.9f) );
+
+                // Run all this data through Preetham sky color math model
+                /*const float x( _xDistributionFunction(theta, sin_texel_alt, gamma, cos_gamma_sq) );
+                const float y( _yDistributionFunction(theta, sin_texel_alt, gamma, cos_gamma_sq) );
+                const float Y( _YDistributionFunction(theta, sin_texel_alt, gamma, cos_gamma_sq) );
+
+                // Convert xyY color space to XYZ color space
+                // Conversions from Danny Pascale, "A Review of RGB Color Spaces"
+                const float temp( Y / y );
+                const float X( x * temp );
+                const float Z( (1.0f - x - y) * temp );
+
+                // Convert XYZ color space to sRGB color space
+                float R( X *  3.2405 + -1.5371 * Y + -0.4985 * Z );
+                float G( X * -0.9693 +  1.8760 * Y +  0.0416 * Z );
+                float B( X *  0.0556 + -0.2040 * Y +  1.0572 * Z );*/
+
+                // Our home grown sky color math model
+                float R( _RedFunction(theta, theta_0_1, gamma, weighted_gamma_1_0) );
+                float G( _GreenFunction(theta, theta_0_1, gamma, weighted_gamma_1_0) );
+                float B( _BlueFunction(theta, theta_0_1, gamma, weighted_gamma_1_0) );
                 
+                // tone mapping
+                const float exposure( 5.0f );
+                const float luminance( R * 0.299f + G * 0.587f + B * 0.114f );
+                const float brightness( 1.0f - expf(-luminance * exposure) );
+                const float scale( brightness / (luminance + 0.001f) );
+                R *= scale;
+                G *= scale;
+                B *= scale;
+
+                // Clamp upper bound to 1.0
+                // No need to clamp lower bound to 0.0 because our lighting is purely additive
+                R = (R > 1.0f) ? 1.0f : R;
+                G = (G > 1.0f) ? 1.0f : G;
+                B = (B > 1.0f) ? 1.0f : B;
+
                 *(ptr++) = (unsigned char)(R * 255.0f);
                 *(ptr++) = (unsigned char)(G * 255.0f);
                 *(ptr++) = (unsigned char)(B * 255.0f);
             }
-            
+		}
+
             _current_tex_row ++;
+			rows++;
         }
         
-        if(_current_tex_row >= SKY_DOME_Y_SIZE)
-            _current_tex_row = 0;
-        
+        if(_current_tex_row >= _skyDomeYSize)
+        {    
+			_current_tex_row = 0;
+
+
 // DANG robert.... how about some backwards compatibility... especially with versions?
 //#if (OSG_VERSION_MAJOR >= 2) && (OSG_VERSION_MINOR >= 6 )
 #if ( OPENSCENEGRAPH_MAJOR_VERSION > 2 ) || ( ( OPENSCENEGRAPH_MAJOR_VERSION >= 2 ) && ( OPENSCENEGRAPH_MINOR_VERSION >= 6 ) )
@@ -646,5 +730,6 @@ void SkyDome::_computeSkyTexture()
 #else
         _skyTexture->setImage( image );
 #endif
+	   }
     }
 }

@@ -121,6 +121,12 @@ struct OSGEPHEMERIS_EXPORT EphemerisData : public Shmem
       Reasonable values are {1.0, 60.0}
      */
     float turbidity;
+    
+	/*! 
+      Temperature of atmosphere near the ground.
+      Reasonable values are {-30.0, 30.0}	FIXME wooooot?
+     */
+    float temperature;
 
     /*! 
       Date and Time for which to compute the ephemeris

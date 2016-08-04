@@ -40,21 +40,23 @@ EphemerisModel::EphemerisModel(const EphemerisModel& /*copy*/,
 {
 }
 
-EphemerisModel::EphemerisModel():
-    _inited(false),
-    _members(DEFAULT_MEMBERS),
-    _scale(1.0),
-    _center(0,0,0),
-    _autoDateTime(false),
-    _sunLightNum(0),
-    _moonLightNum(1),
-    _skyDomeUseSouthernHemisphere(true),
-    _skyDomeMirrorSouthernHemisphere( true ),
-    _sunFudgeScale(1.0),
-    _moonFudgeScale(1.0)
+EphemerisModel::EphemerisModel()
+    : _inited(false)
+    , _members(DEFAULT_MEMBERS)
+    , _scale(1.0)
+    , _center(0,0,0)
+    , _autoDateTime(false)
+    , _sunLightNum(0)
+    , _moonLightNum(1)
+    , _skyDomeUseSouthernHemisphere   ( true )
+    , _skyDomeMirrorSouthernHemisphere( true )
+    , _sunFudgeScale(1.0)
+    , _moonFudgeScale(1.0)
+
 {
 
     _ephemerisData   = new (EphemerisData::getDefaultShmemFileName()) EphemerisData;
+	//_ephemerisData   = new EphemerisData;
     _ephemerisEngine = new EphemerisEngine(_ephemerisData);
 
     _skyTx = new osg::MatrixTransform;
@@ -256,7 +258,7 @@ void EphemerisModel::_createMoonLightSource()
 
 void EphemerisModel::_createSkyDome()
 {
-    _skyDome = new SkyDome( _skyDomeUseSouthernHemisphere, _skyDomeMirrorSouthernHemisphere );
+    _skyDome = new SkyDome( _skyDomeUseSouthernHemisphere, _skyDomeMirrorSouthernHemisphere, _params.skyDomeXSize, _params.skyDomeYSize, _params.useOMP, _params.ompThreads );
 }
 
 void EphemerisModel::_createGroundPlane()
@@ -401,6 +403,19 @@ void EphemerisModel::setTurbidity( float turbidity )
 {
     if( _ephemerisData != 0L )
         _ephemerisData->turbidity = turbidity;
+}
+
+float EphemerisModel::getTemperature() const
+{
+	if( _ephemerisData != 0L )
+		return _ephemerisData->temperature;
+	return 0.0;
+}
+
+void EphemerisModel::setTemperature( float temperature )
+{
+	if( _ephemerisData != 0L )
+		_ephemerisData->temperature = temperature;
 }
 
 void EphemerisModel::setLatitudeLongitude( double latitude, double longitude )
@@ -580,7 +595,11 @@ void EphemerisModel::_updateSun()
     if( _skyDome.valid() )
     {
         _skyDome->setSunPos( sunAz, sunAlt );
-        _skyDome->setTurbidity( _ephemerisData->turbidity );
+		_skyDome->setTurbidity( _ephemerisData->turbidity );
+		//FIXME
+#if 0
+        _skyDome->setTemperature( _ephemerisData->temperature );
+#endif
     }
 
     if( _starField.valid() )

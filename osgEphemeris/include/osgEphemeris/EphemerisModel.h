@@ -98,6 +98,23 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
                                  STAR_FIELD
         };
 
+		struct Params
+		{
+			 Params()
+				 : 	skyDomeXSize(128)
+				 ,  skyDomeYSize(128)
+				 ,  useOMP(false)
+				 ,  ompThreads(4)
+			 {
+
+			 }
+
+			 unsigned   skyDomeXSize;
+			 unsigned	skyDomeYSize;
+			 bool       useOMP;
+			 unsigned	ompThreads;
+		};
+
         /** The default constructor */
         EphemerisModel();
 
@@ -282,6 +299,15 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
           Get the turbidity of the atmosphere.
           */
         float getTurbidity() const;
+        
+		/**
+          Set the temperature of the atmosphere.
+          */
+        void setTemperature( float temperature );
+        /**
+          Get the temperature of the atmosphere.
+          */
+        float getTemperature() const;
 
         /**
           Set both the latitude and longitude of the current eyepoint
@@ -340,6 +366,11 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
         void setSkyDomeMirrorSouthernHemisphere( bool flag ) { _skyDomeMirrorSouthernHemisphere = flag; }
         bool getSkyDomeMirrorSouthernHemisphere() { return _skyDomeMirrorSouthernHemisphere; }
 
+
+		void setParams( const Params& p) { _params = p; }
+		const Params& getParams() const  { return _params; }
+		Params& getParams()              { return _params; }
+
         /**
           Return a pointer to the GroundPlane
         */
@@ -395,7 +426,8 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
         unsigned int _sunLightNum;
         unsigned int _moonLightNum;
         bool _skyDomeUseSouthernHemisphere;
-        bool _skyDomeMirrorSouthernHemisphere;
+		bool _skyDomeMirrorSouthernHemisphere;
+
 
         class UpdateCallback  : public osg::NodeCallback
         {
@@ -478,6 +510,8 @@ class OSGEPHEMERIS_EXPORT EphemerisModel : public osg::Group
         double _sunFudgeScale;
         double _moonFudgeScale;
 
+
+		Params _params;
 };
 
 
