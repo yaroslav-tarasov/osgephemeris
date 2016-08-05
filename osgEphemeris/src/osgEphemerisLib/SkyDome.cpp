@@ -311,7 +311,7 @@ void SkyDome::_buildStateSet()
         {
             *(ptr++) = 0x30;
             *(ptr++) = 0x30;
-            *(ptr++) = 0xFF;
+            *(ptr++) = 0xF0;//0xFF;
         }
         
         osg::Image *skyImage = new osg::Image;
@@ -588,6 +588,7 @@ void SkyDome::_computeSkyTexture()
             const float theta_0_1( theta / 1.57079633f );
 
 		if(_useOMP)
+        {
 #ifdef _OPENMP
 			#pragma omp parallel for 
 #endif
@@ -650,6 +651,8 @@ void SkyDome::_computeSkyTexture()
                 /**(ptr++)*/*(ptr + (rows * _skyDomeXSize * 3 + i * 3 + 1) ) = (unsigned char)(G * 255.0f);
                 /**(ptr++)*/*(ptr + (rows * _skyDomeXSize * 3 + i * 3 + 2) ) = (unsigned char)(B * 255.0f);
             }
+
+        }
 		else
 		{
 			for(int i=0; i<_skyDomeXSize; ++i)
